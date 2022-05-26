@@ -1,0 +1,114 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.github.jengelman.gradle.plugins.shadow.tasks.ConfigureShadowRelocation
+
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+
+buildscript {
+	dependencies {
+		classpath 'org.codehaus.groovy:groovy-all:3.0.9'
+	}
+}
+
+plugins {
+	id 'java-gradle-plugin'
+	id 'maven-publish'
+	id 'com.gradle.plugin-publish' version '0.18.0'
+	id 'idea'
+	id 'com.github.johnrengelman.shadow' version '7.1.2'
+	id 'org.cadixdev.licenser' version '0.6.1' apply false
+}
+
+group = 'com.matyrobbrt.gradle.pngoptimiser'
+
+if (properties.hasProperty("testing")) {
+	version = version + "-testing"
+	println "New version: $version"
+}
+
+configurations {
+	shade
+	implementation.extendsFrom(shade)
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	shade 'commons-io:commons-io:2.11.0'
+}
+
+pluginBundle {
+	website = 'https://github.com/Matyrobbrt/GradlePNGOptimiser'
+	vcsUrl = 'https://github.com/Matyrobbrt/GradlePNGOptimiser'
+	tags = ['pngotimizers']
+}
+
+components.java.withVariantsFromConfiguration(configurations.runtimeElements) {
+    skip()
+}
+components.java.withVariantsFromConfiguration(configurations.apiElements) {
+    skip()
+}
+
+gradlePlugin {
+	plugins {
+		resourceMerge {
+			id = 'com.matyrobbrt.pngoptimiser'
+			displayName = 'PNGOptimiser'
+			// description = 'A plugin that allows merging resource files based on different rules.'
+			implementationClass = 'com.matyrobbrt.gradle.pngoptimiser.PNGOptimiser'
+		}
+	}
+}
+
+publishing {
+	repositories {
+		maven {
+			name = 'localPluginRepository'
+			url = './maven'
+		}
+	}
+}
+
+tasks.create('relocateShadowJar', ConfigureShadowRelocation) {
+	target(tasks.shadowJar)
+	prefix("com.matyrobbrt.gradle.pngoptimiser.shade")
+}
+
+tasks.named('shadowJar', ShadowJar).configure {
+	archiveClassifier.set('')
+	configurations = [project.configurations.shade]
+	dependsOn('relocateShadowJar')
+	manifest.attributes(makeAttributes())
+}
+
+jar {
+	classifier 'lite'
+}
+
+Map<?, ?> makeAttributes() {
+	final var actualDateTime = OffsetDateTime.now(ZoneOffset.UTC).withNano(0)
+	final var currentDateTime = DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(actualDateTime)
+	return [
+		'Maven-Artifact'          : "${project.group}:${archivesBaseName}:${project.version}",
+		'Specification-Title'     : archivesBaseName,
+		'Specification-Vendor'    : 'Matyrobbrt',
+		'Specification-Version'   : '1',
+		'Implementation-Title'    : archivesBaseName,
+		'Implementation-Version'  : "${project.version}",
+		'Implementation-Vendor'   : 'Matyrobbrt',
+		'Implementation-Timestamp': currentDateTime,
+		'Built-On-Java'           : "${System.getProperty('java.vm.version')} (${System.getProperty('java.vm.vendor')})",
+		'OxiPng-Version'           : project.oxipng_version
+	]
+}
+
+allprojects {
+//	apply plugin: 'org.cadixdev.licenser'
+//	license {
+//		header = rootProject.file('licenseheader.txt')
+//	}
+}

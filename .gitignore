@@ -1,0 +1,25 @@
+#Directories
+/build/
+/bin/
+/logs/
+/data/
+/maven/
+
+#Hidden Directories
+.gradle/
+.settings/
+.mtj.tmp/
+.idea/
+
+#File Extensions
+*.iml
+*.ipr
+*.iws
+*.war
+*.ear
+*.class
+*.classpath
+*.project
+
+#File Types
+hs_err_pid*

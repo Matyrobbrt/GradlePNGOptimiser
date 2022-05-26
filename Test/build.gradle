@@ -1,0 +1,10 @@
+import com.matyrobbrt.gradle.pngoptimiser.task.OptimisePNGTask
+
+plugins {
+    id 'java'
+    id 'com.matyrobbrt.pngoptimiser' version '0.1.0'
+}
+
+tasks.register('optimize', OptimisePNGTask, {
+    file("configuring_team.png")
+})
