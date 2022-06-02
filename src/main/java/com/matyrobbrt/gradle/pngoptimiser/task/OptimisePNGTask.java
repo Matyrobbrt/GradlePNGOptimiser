@@ -8,11 +8,20 @@ import org.gradle.api.file.FileTree;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @SuppressWarnings("unused")
 public class OptimisePNGTask extends DefaultTask implements Runnable {
@@ -21,6 +30,7 @@ public class OptimisePNGTask extends DefaultTask implements Runnable {
     @Internal
     private final OxiPng oxiPng = new OxiPng(getProject());
     private final List<File> files = new ArrayList<>();
+    public boolean backup;
 
     public void file(File file) {
         this.files.add(file);
@@ -56,10 +66,20 @@ public class OptimisePNGTask extends DefaultTask implements Runnable {
         closure.call(oxiPng);
     }
 
+    public void backupOldFiles() {
+        this.backup = true;
+    }
+
     @Override
     @TaskAction
     public void run() {
         try {
+            if (backup) {
+                getProject().getLogger().info("Backing up files...");
+                final Path path = backup();
+                getProject().getLogger().info("Files backed up to {}", path);
+            }
+
             getProject().getLogger().warn("Optimising {} files... This may take a while.", files.size());
             var oldSize = BigInteger.valueOf(0L);
             final var filesCopy = new ArrayList<>(files);
@@ -84,8 +104,6 @@ public class OptimisePNGTask extends DefaultTask implements Runnable {
             var newSize = BigInteger.valueOf(0L);
             for (final var file : files)
                 newSize = newSize.add(BigInteger.valueOf(file.length()));
-            System.out.println(oldSize.longValue());
-            System.out.println(newSize.longValue());
             if (newSize.compareTo(oldSize) < 0)
                 getProject().getLogger().warn("Reduced total file sizes by {}", String.format("%.2f%%", (oldSize.doubleValue() - newSize.doubleValue()) * 100 / oldSize.doubleValue()));
         } catch (Exception e) {
@@ -100,5 +118,23 @@ public class OptimisePNGTask extends DefaultTask implements Runnable {
         final var pHandle = ProcessHandle.of(process.pid());
         while (pHandle.map(ProcessHandle::isAlive).orElse(false))
             Thread.onSpinWait();
+    }
+
+    private Path backup() throws IOException {
+        final var path = getProject().getBuildDir().toPath().resolve("oxipng").resolve("backups")
+                .resolve(DateTimeFormatter.ISO_DATE_TIME.format(LocalDateTime.now()).replace(':', '.') + ".zip");
+        Files.createDirectories(path.getParent());
+        Files.deleteIfExists(path);
+        final var projectRoot = getProject().getRootDir().toPath();
+        final var zipOut = new ZipOutputStream(Files.newOutputStream(path));
+        for (final var file : files) {
+            final var fPath = file.toPath();
+            final var zipEntry = new ZipEntry(projectRoot.relativize(fPath).toString());
+            zipOut.putNextEntry(zipEntry);
+            zipOut.write(Files.readAllBytes(fPath));
+            zipOut.closeEntry();
+        }
+        zipOut.close();
+        return path;
     }
 }

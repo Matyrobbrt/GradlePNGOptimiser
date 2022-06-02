@@ -43,7 +43,7 @@ dependencies {
 pluginBundle {
 	website = 'https://github.com/Matyrobbrt/GradlePNGOptimiser'
 	vcsUrl = 'https://github.com/Matyrobbrt/GradlePNGOptimiser'
-	tags = ['pngotimizers']
+	tags = ['png-optimise']
 }
 
 components.java.withVariantsFromConfiguration(configurations.runtimeElements) {
@@ -58,7 +58,7 @@ gradlePlugin {
 		resourceMerge {
 			id = 'com.matyrobbrt.pngoptimiser'
 			displayName = 'PNGOptimiser'
-			// description = 'A plugin that allows merging resource files based on different rules.'
+			description = 'A Gradle plugin which adds tasks in order to optimise png files'
 			implementationClass = 'com.matyrobbrt.gradle.pngoptimiser.PNGOptimiser'
 		}
 	}

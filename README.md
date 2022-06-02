@@ -15,6 +15,7 @@ This plugins provides one `OptimisePNGTask` task which can configure OxiPng, and
 tasks.register('optimisePng', com.matyrobbrt.gradle.pngoptimiser.task.OptimisePNGTask) {
   file(project.fileTree(dir: file('images'), includes: ['**/*.png'])) // Optimise all png files in the `images` directory
   option 'o', 6 // Use optimisation of type 6
+  backupOldFiles() // Backup the png files before optimising them
 }
 ```
 
